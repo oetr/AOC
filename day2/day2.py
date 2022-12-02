@@ -4,7 +4,7 @@ def day2(filename, part_no):
     enemy_lut = {'A': 0, 'B': 1, 'C': 2}
     player_lut = {'X': 0, 'Y': 1, 'Z': 2}
     needs_to_lut = {'X': -1, 'Y': 0, 'Z': 1}
-    move_lut = {0: 1, 1: 2, 2: 3}
+    move_lut = [1, 2, 3]
     diff_lut = {0: 3,        # draw
                 1: 6, -2: 6, # win
                 2: 0, -1: 0} # lose
