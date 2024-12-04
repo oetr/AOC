@@ -77,6 +77,28 @@
 
 (find-all-XMAS-ses data)
 
-
 ;; part 2
+(define cases
+  (list
+   "MSAMS"
+   "SSAMM"
+   "MMASS"
+   "SMASM"))
 
+(define (find2 data)
+  (define result 0)
+  (for ([line data]
+        [line1 (cdr data)]
+        [line2 (cddr data)])
+    (for ([c1 line]
+          [c2 (substring line 2)]
+          [c3 (substring line1 1)]
+          [c4 line2]
+          [c5 (substring line2 2)])
+      (define maybe-xmas (list->string (list c1 c2 c3 c4 c5)))
+      (when (for/or ([a-case cases])
+              (string=? a-case maybe-xmas))
+        (set! result (+ result 1)))))
+  result)
+
+(find2 input)
