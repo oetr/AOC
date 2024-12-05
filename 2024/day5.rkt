@@ -2,7 +2,7 @@
 
 (define input1 (file->string "inputs/day5.txt"))
 
-(define part1-test
+(define test-input1
   "47|53
 97|13
 97|61
@@ -59,3 +59,17 @@
        (for/list [(correct (filter correct-order? prints))]
          (list-ref correct (/ (- (length correct) 1) 2))))
 
+
+;; part 2
+(define (less-than? a b)
+  (or (member b (hash-ref rules a '()))
+      (not (member a (hash-ref rules b '())))))
+
+
+(define fixed (map (lambda (lst)
+                     (sort lst less-than?))
+                   (filter (compose not correct-order?) prints)))
+
+(apply +
+       (for/list [(correct fixed)]
+         (list-ref correct (/ (- (length correct) 1) 2))))
