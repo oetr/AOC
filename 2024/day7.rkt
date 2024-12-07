@@ -58,9 +58,9 @@
 
 ;; part 2
 (define (concat a b)
-  (string->number
-   (string-append (number->string a)
-                  (number->string b))))
+  (+
+   (* a (expt 10 (ceiling (log b 10))))
+   b))
 
 (module+ main
   (define total-calibration-results2
