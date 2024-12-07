@@ -30,6 +30,12 @@
                    (op result w)))
   (= test result))
 
+(define (sat*? test weights possible-ops)
+  (define all-ops (make-ops (sub1 (length weights))
+                            possible-ops))
+  (for/or [(ops (in-list all-ops))]
+    (sat? test weights ops)))
+
 (define (make-ops len lst)
   (for/fold ([acc '(())])
             ([_ len])
@@ -42,19 +48,15 @@
                (make-ops 2 '(0 1))
                '((0 0) (0 1) (1 0) (1 1))))
 
-;; part
+;; part 1
 (module+ main
   (define total-calibration-results
     (for/sum ([test (in-list tests)]
               [w (in-list weights)]
-              #:when
-              (ormap (lambda (ops)
-                       (sat? test w ops))
-                     (make-ops (sub1 (length w))
-                               (list + *))))
+              #:when (sat*? test w (list + *)))
       test)))
 
-;; part2
+;; part 2
 (define (concat a b)
   (string->number
    (string-append (number->string a)
@@ -66,12 +68,7 @@
      (for/sum ([test (in-list tests)]
                [w (in-list weights)]
                [i (length tests)]
-               #:when
-               (ormap (lambda (ops)
-                        (sat? test w ops))
-                      (make-ops (sub1 (length w))
-                                ;; add the concat operator to the list of operators
-                                (list + * concat))))
+               #:when (sat*? test w (list + * concat)))
        ;; show progress
        (when (zero? (modulo i 10))
          (printf "~a\n" i))
