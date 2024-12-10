@@ -26,7 +26,7 @@
 
 (define (get-sets m)
   (for/list ([i 10])
-    (list->set (where data i))))
+    (list->set (where m i))))
 
 (define (adjacent? p1 p2)
   (or
