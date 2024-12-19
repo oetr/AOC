@@ -14,7 +14,7 @@
 
 ;; only memoizes the first parameter
 (define-syntax-parser memoize-first
-  ([_ (param:id not-memoized-params ...)
+  ([_ (param:id not-memoized-params:id ...)
       (~optional (~seq #:hash hsh:expr) #:defaults [(hsh #'make-hash)])
       body:expr ...+]
    #'(let ([cache (hsh)]
@@ -22,9 +22,9 @@
        (case-lambda
          [() cache]
          [(param not-memoized-params ...)
-            (let ([result (hash-ref cache param unique-token)])
-              (if (and (symbol? result) (symbol=? unique-token result))
-                  (let ([value ((lambda () body ...))])
-                    (hash-set! cache param value)
-                    value)
-                  result))]))))
+          (define result (hash-ref cache param unique-token))
+          (if (and (symbol? result) (symbol=? unique-token result))
+              (let ([value ((lambda () body ...))])
+                (hash-set! cache param value)
+                value)
+              result)]))))
