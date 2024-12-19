@@ -45,7 +45,7 @@
      [#t 1]
      [#f 0])))
 
-;; cpu time: 1 real time: 1 gc time: 0
+;; cpu time: 44 real time: 45 gc time: 0
 
 (define (make-dfs2)
   (define memo (make-hash))
