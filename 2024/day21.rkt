@@ -109,6 +109,65 @@
                          (priority-queue-replace-if-better new-frontier new-state)])))
               (loop new-frontier)])])))
 
+(define (get-all-paths start goal)
+  (define visited (mutable-set))
+  (define best-cost #f)
+  (define paths '())
+  (let loop ([frontier (list (node 0 start '() '()))])
+    (cond
+      [(empty? frontier) paths]
+      [else
+       (for ([a-node frontier])
+         (define p (node-key a-node))
+         (define cost (node-cost a-node))
+         (set-add! visited p))
+       (define new-frontier
+         (for/fold ([new-frontier '()])
+                   ([a-node frontier])
+           (define p (node-key a-node))
+           (define cost (node-cost a-node))
+           (cond [(eq? p goal)
+                  (set! paths (cons a-node paths))
+                  new-frontier]
+                 [else
+                  (define adj-edges (key-edges p))
+                  (define frontier
+                    (for/fold ([new-frontier '()])
+                              ([child-key (map edge-key adj-edges)]
+                               [child-edge adj-edges]
+                               #:unless (set-member? visited child-key))
+                      (define new-state (node (+ cost 1) child-key child-edge a-node))
+                      (cons new-state new-frontier)))
+                  (append frontier new-frontier)])))
+       (loop new-frontier)])))
+
+(define (compression-rank path)
+  (for/sum ([action1 path]
+            [action2 (cdr path)])
+    (if (eq? action1 action2)
+        1
+        0)))
+    
+
+;; precompute the paths
+(define (precompute-shortest keypad)
+  (for*/hash ([(key-value1 key1) (in-hash keypad)]
+              [(key-value2 key2) (in-hash keypad)])
+    (cond [(equal? key-value1 key-value2)
+           (values (cons key-value1 key-value2)
+                   '(A))]
+          [else
+           (define all-paths (get-all-paths key1 key2))
+           ;; only leave the best-compressed path
+           (define best-path (argmax compression-rank (map node->path all-paths)))
+           (values (cons key-value1 key-value2)
+                   (append best-path '(A)))])))
+                   
+                   ;; (for/list ([p ])
+                   ;;   (append (node->path p) '(A))))])))
+
+;;(map node->path (get-all-paths (hash-ref keypad1 7) (hash-ref keypad1 'A)))
+
 (define (node->path a-node)
   (rest
    (reverse 
@@ -120,40 +179,106 @@
         ([empty? parent] (list edge-val))
         (else (cons edge-val (loop parent))))))))
 
+
 ;; press some code on keypad1
-(define (press-code code keypad initial)
+(define (press-code code precomp initial)
   (define-values (paths _)
     (for/fold ([paths '()]
-               [current-key (hash-ref keypad initial)])
-              ([c code])
-      (define goal (hash-ref keypad c))
-      (define path (append (node->path (uniform-cost-search current-key goal)) '(A)))
-      (values (cons path paths)
+               [current-key initial])
+              ([goal code])
+      (define shortest-paths (hash-ref precomp (cons current-key goal)))
+      (values (cons shortest-paths paths)
+              goal)))
+  (map flatten (apply cartesian-product (reverse paths))))
+
+(define (press-code2 code precomp initial)
+  (define-values (paths _)
+    (for/fold ([paths '()]
+               [current-key initial])
+              ([goal code])
+      (define shortest-paths (hash-ref precomp (cons current-key goal)))
+      (values (cons shortest-paths paths)
               goal)))
   (flatten (reverse paths)))
 
-;;(press-code (car codes) keypad1 'A)
-(length (press-code (press-code (press-code '(0 2 9 A) keypad1 'A)
-                                keypad2 'A) keypad2 'A))
+(define (press-code-pick-one code precomp initial)
+  (define-values (paths _)
+    (for/fold ([paths '()]
+               [current-key initial])
+              ([goal code])
+      (define p (car (hash-ref precomp (cons current-key goal))))
+      (values (cons p paths)
+              goal)))
+  (flatten (reverse paths)))
 
-(define (layers code keypads)
-  (for/fold ([code code])
-            ([(keypad i) (in-indexed keypads)])
-    (define new-code (press-code code keypad 'A))
-    (printf "~a: ~a~n" i (length new-code))
-    new-code
-    ))
+(define precomp1 (precompute-shortest keypad1))
+(define precomp2 (precompute-shortest keypad2))
 
-(length (layers '(0 2 9 A) (list keypad1 keypad2 keypad2)))
+;; (press-code (car codes) keypad1 precomp1 'A)
+;; (define (get-min-path-len code precomp1 precomp2)
+;;   (define paths (press-code code precomp1 'A))
+;;   (define paths1
+;;     (let ([paths (apply append
+;;                         (for/list ([p paths])
+;;                           (press-code p precomp2 'A)))])
+;;       (define min-len (apply min (map length paths)))
+;;       (filter-not (λ (lst) (> (length lst) min-len)) paths)))
 
-(press-code '(< A ^ A > ^ ^ A v v v A) keypad2 'A)
-(length (layers '(< A ^ A > ^ ^ A v v v A) (list keypad2 keypad2)))
+;;   (define paths2
+;;     (let ([paths (for/list ([p paths1])
+;;                    (press-code-pick-one p precomp2 'A))])
+;;       (define min-len (apply min (map length paths)))
+;;       min-len))
+;;   paths2)
+(press-code2 (press-code2 (press-code2 '(0 2 9 A) precomp1 'A)
+                          precomp2 'A)
+             precomp2 'A)
 
-(length (press-code '(v < < A > > ^ A < A > A v A < ^ A A > A < v A A A > ^ A) keypad2 'A))
+(define (get-min-path-len code precomp1 precomp2 n)
+  (length 
+   (for/fold ([code (press-code2 code precomp1 'A)])
+             ([_ n])
+     (press-code2 code precomp2 'A))))
+  
+  ;; (define paths1
+  ;;   (let ([paths (apply append
+  ;;                       (for/list ([p paths])
+  ;;                         (press-code p precomp2 'A)))])
+  ;;     (define min-len (apply min (map length paths)))
+  ;;     (filter-not (λ (lst) (> (length lst) min-len)) paths)))
+  ;; (define paths2
+  ;;   (let ([paths (for/list ([p paths1])
+  ;;                  (press-code-pick-one p precomp2 'A))])
+  ;;     (define min-len (apply min (map length paths)))
+  ;;     min-len))
+  ;; paths2)
 
-(press-code '(< A ^ A > ^ ^ A v v v A) keypad2 'A)
-;;(node->path (uniform-cost-search (hash-ref keypad1 'A) (hash-ref keypad1 7)))
-(string-length "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A")
+;;"208A\n586A\n341A\n463A\n593A\n"
+;; part 1
+(+ 
+ (* 208 (get-min-path-len '(2 0 8 A) precomp1 precomp2 2))
+ (* 586 (get-min-path-len '(5 8 6 A) precomp1 precomp2 2))
+ (* 341 (get-min-path-len '(3 4 1 A) precomp1 precomp2 2))
+ (* 463 (get-min-path-len '(4 6 3 A) precomp1 precomp2 2))
+ (* 593 (get-min-path-len '(5 9 3 A) precomp1 precomp2 2)))
 
-;; some local shortest path for one key pad might not result in shortest global path after n keypad chains
-;; 
+
+(define (get-min-path-len2 code precomp1 precomp2 n)
+  (define final
+    (for/fold ([paths (press-code code precomp1 'A)])
+              ([i (- n 2)])
+      (define new-paths (apply append
+                               (for/list ([p paths])
+                                 (press-code p precomp2 'A))))
+      (define min-len (apply min (map length new-paths)))
+      (define max-len (apply max (map length new-paths)))
+      
+      (define filtered-paths (filter-not (λ (lst) (> (length lst) min-len)) new-paths))
+      (define filtered-bad-paths (filter (λ (lst) (> (length lst) min-len)) new-paths))
+      (printf "~a ~a --- ~a\n" min-len max-len (length (car filtered-paths)))
+      (printf "   ~a\n   ~a\n"  (car filtered-paths) (car filtered-bad-paths))
+      ;; run-length code, and take the shortest
+      filtered-paths))
+  (length (car final)))
+
+;;(get-min-path-len2 '(2 0 8 A) precomp1 precomp2 4)
