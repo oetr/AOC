@@ -69,7 +69,16 @@
           [else
            (define label (car labels-to-check))
            (define dependencies (set->list (hash-ref waiting-on new-label)))
-           (define resolved (for/list ([]))
+           (define new-wires (for/fold ([wires wires]) ([dependency dependencies])
+                              (define in1 (hash-ref wires (gate-in1 dependency) #f))
+                              (define in2 (hash-ref wires (gate-in2 dependency) #f))
+                              (if (and in1 in2)
+                                  (hash-set wires
+                                            (gate-out dependency)
+                                            ((gate-op dependency in1 in2)))
+                                  wires)))
+           (define new-waiting-on )
+
            ;; check if the gate can compute now
            (define g (car gates-to-resolve))
            
