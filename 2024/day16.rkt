@@ -3,7 +3,23 @@
 (require advent-of-code
          "./priority-queue.rkt")
 
- (define input (fetch-aoc-input (find-session) 2024 16 #:cache #true))
+(define input (fetch-aoc-input (find-session) 2024 16 #:cache #true))
+;; (define input
+;;   "###############
+;; #.......#....E#
+;; #.#.###.#.###.#
+;; #.....#.#...#.#
+;; #.###.#####.#.#
+;; #.#.#.......#.#
+;; #.#.#####.###.#
+;; #...........#.#
+;; ###.#.#####.#.#
+;; #...#.....#.#.#
+;; #.#.#.###.#.#.#
+;; #.....#...#.#.#
+;; #.###.#.#.#.#.#
+;; #S..#.....#...#
+;; ###############")
 
 ;; (define input
 ;;   "#################
@@ -93,47 +109,32 @@
 
 (define (find-shortest-path grid start goal)
   (define explored (mutable-set))
-  (define i 0)
-  (let loop ([frontier (make-priority-queue node< (node 0 start '()))])
+  ;;(define i 0)
+  (define frontier (make-priority-queue node< (node 0 start '())))
+  (let loop ([solutions '()]
+             [best-cost (expt 2 32)])
     (cond
-      [(= i 1000000) #f]
       [(priority-queue-empty? frontier) #f]
       [else
-       (set! i (add1 i))
-       ;;(printf "~a - "(priority-queue-length frontier))
        (define candidate-node (priority-queue-poll! frontier))
        (define posn (node-posn candidate-node))
        (define cost (node-cost candidate-node))
-       ;;(define parent-posn (if (empty? (node-parent candidate-node)) '() (node-posn (node-parent candidate-node))))
-       ;;(printf "~a: ~a   -    ~a~n" cost parent-posn posn)
-       ;; (for ([n frontier]) (printf "    ~a   " (cons (node-cost n) (node-posn n))))
-       ;; (printf "~n")
-       ;;(printf "~a - ~a\n"(priority-queue-length frontier) posn)
-       ;;(printf "~a - ~a~n" goal posn)
        (cond
-         [(posn-xy= goal posn) candidate-node]
+         [(posn-xy= goal posn)
+          (if (<= cost best-cost)
+              (loop (cons candidate-node solutions) cost)
+              solutions)]
          [else
           (set-add! explored posn)
           (for ([action (get-possible-next-states grid posn)])
             (define new-cost (+ cost
                                 (if (symbol=? (posn-direction posn)
-                                           (posn-direction action))
-                                 1
-                                 1000)))
-            (define already-contains? (priority-queue-contains? frontier
-                                                                (λ (a)
-                                                                  (posn= (node-posn a)
-                                                                         action))))
-            (cond [(not (or (set-member? explored action) already-contains?))
-                   (priority-queue-add! frontier (node new-cost action candidate-node))]
-                  [already-contains?
-                   (priority-queue-update! frontier
-                                           (λ (a) (posn= (node-posn a) action))
-                                           (λ (a) (when (< new-cost (node-cost a))
-                                                    (set-node-cost! a new-cost)
-                                                    (set-node-parent! a candidate-node))))]
-                  [else void]))
-          (loop frontier)])])))
+                                              (posn-direction action))
+                                    1
+                                    1000)))
+            (unless (set-member? explored action)
+              (priority-queue-add! frontier (node new-cost action candidate-node))))
+          (loop solutions best-cost)])])))
 
 
 (define (extract-path a-node)
@@ -144,8 +145,18 @@
       [(node _ posn parent) (loop parent
                                   (cons posn path))])))
 
-(define sp (time (find-shortest-path grid start goal)))
+;; part 1
+(define-values (part1-cost part1-path) (time (extract-path (car (find-shortest-path grid start goal)))))
+;; cpu time: 2450 real time: 2450 gc time: 111
+;; using the improvements from Russel&Norvig, will push this time down to 900ms:
+;; update the node in the frontier if we encounter lower cost
 
-(define-values (cost path) (extract-path sp))
-cost
-;;path
+;; part 2
+(time
+ (set-count
+  (for/fold ([unique-tiles (set)]) ([solution (find-shortest-path grid start goal)])
+    (define-values (_ path) (extract-path solution))
+    (set-union unique-tiles (for/set ([tile path])
+                              (cons (posn-x tile) (posn-y tile)))))))
+
+;; cpu time: 2450 real time: 2450 gc time: 111
