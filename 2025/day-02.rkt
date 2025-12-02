@@ -10,34 +10,36 @@
   (for/list ([a-range (string-split (string-trim input) ",")])
     (map string->number (string-split a-range "-"))))
 
-;; part 1 brute force
-(for/fold ([result 0]) ([a-range data])
-  (+ result
-     (for/fold ([result 0]) ([num (range (first a-range) (+ 1 (second a-range)))])
-       (define n (number->string num))
-       (define len (string-length n))
-       (if (odd? len)
-           result
-           ;; left half equals right half
-           (if (string=? (substring n 0 (/ len 2)) (substring n (/ len 2)))
-               (+ result num)
-               result)))))
+(define (sum-filtered-ranges predicate ranges)
+  (for*/sum ([range (in-list ranges)]
+             [num (in-range (first range) (add1 (second range)))]
+             #:when (predicate num))
+    num))
 
-;; part 2 brute force
-(for/fold ([result 0]) ([a-range data])
-  (+ result
-     (for/fold ([result 0]) ([num (range (first a-range) (+ 1 (second a-range)))])
-       (define n (number->string num))
-       (define len (string-length n))
-       (define sizes
-         (for/list ([size (range 1 (+ 1 (/ len 2)))]
-                    #:when (and (zero? (modulo len size)) (not (= 1 len))))
-           size))
-       (+ result
-          (if (for/or ([size sizes])
-                ;; found repetition
-                (define s (substring n 0 size))
-                (for/and ([offset (range size len size)])
-                  (string=? s (substring n offset (+ offset size)))))
-              num
-              0)))))
+(define (halfs-equal? num)
+  (define num-str (number->string num))
+  (define len (string-length num-str))
+  (and (even? len)
+       (> len 0)
+       (let ([mid (quotient len 2)])
+         (string=? (substring num-str 0 mid)
+                   (substring num-str mid)))))
+
+;; part 1
+(sum-filtered-ranges halfs-equal? data)
+
+(define (substring-repeats? str pattern-len)
+  (define pattern (substring str 0 pattern-len))
+  (for/and ([offset (in-range pattern-len (string-length str) pattern-len)])
+    (string=? pattern (substring str offset (+ offset pattern-len)))))
+
+(define (has-repeating-number? num)
+  (define num-str (number->string num))
+  (define len (string-length num-str))
+  (for/or ([pattern-len (in-range 1 (add1 (quotient len 2)))]
+           #:when (> len 1)
+           #:when (zero? (modulo len pattern-len)))
+    (substring-repeats? num-str pattern-len)))
+
+;; part 2
+(sum-filtered-ranges has-repeating-number? data)
