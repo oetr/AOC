@@ -26,7 +26,8 @@
                    (substring num-str mid)))))
 
 ;; part 1
-(sum-filtered-ranges halfs-equal? data)
+(time (sum-filtered-ranges halfs-equal? data))
+;; cpu time: 177 real time: 177 gc time: 4
 
 (define (substring-repeats? str pattern-len)
   (define pattern (substring str 0 pattern-len))
@@ -39,7 +40,8 @@
   (for/or ([pattern-len (in-range 1 (add1 (quotient len 2)))]
            #:when (> len 1)
            #:when (zero? (modulo len pattern-len)))
-    (substring-repeats? num-str pattern-len)))
+    (substring-repeats? num-str pattern-len))) order-of-magnitude
 
 ;; part 2
-(sum-filtered-ranges has-repeating-number? data)
+(time (sum-filtered-ranges has-repeating-number? data))
+;; cpu time: 399 real time: 399 gc time: 6
