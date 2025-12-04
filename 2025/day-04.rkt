@@ -82,3 +82,23 @@
 (time (part1 input))
 ;; cpu time: 26 real time: 26 gc time: 0
 
+(define (remove-roll! mat posn)
+  (vector-set! (vector-ref mat (posn-r posn)) (posn-c posn) #\.))
+
+(define (collectable? mat acc element row-id col-id)
+  (if (> (8-adjacent? mat 0 element row-id col-id) 0)
+      (cons (posn row-id col-id) acc)
+      acc))
+
+(define (part2 input)
+  (define grid (parse-input input))
+  (let loop ([grid grid]
+             [removed-so-far 0])
+    (define to-remove (matrix-fold grid empty collectable?))
+    (for ([p to-remove]) (remove-roll! grid p))
+    (if (empty? to-remove)
+        removed-so-far
+        (loop grid (+ removed-so-far (length to-remove))))))
+  
+(time (part2 input))
+;; cpu time: 815 real time: 815 gc time: 0
