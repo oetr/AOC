@@ -33,8 +33,7 @@
                  col
                  (op 
                   (vector-ref result col)
-                  (vector-ref (vector-ref data row) col))
-                 ))
+                  (vector-ref (vector-ref data row) col))))
   (for/sum ([n result]) n))
 
 (time (part1 input))
@@ -43,43 +42,63 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Part 2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (c->i char)
+(define (character->digit char)
   (- (char->integer char) (char->integer #\0)))
 
-(define (list->number lst)
-  (define len (length lst))
-  (for/sum ([(n i) (in-indexed lst)])
-    (* (expt 10 (- len i 1)) n)))
+(define (digits->number digit-list)
+  (for/fold ([result 0])
+            ([digit digit-list])
+    (+ (* result 10) digit)))
+
+(define (char->operator chr)
+  (match chr
+    [#\+ +]
+    [#\* *]
+    [_ (error 'char->operator "unknown operator~a~n" chr)]))
+
+(define (column-number col data)
+  (digits->number
+   (for/list ([row data]
+              #:do [(define n (string-ref row col))]
+              #:unless (char=? n #\space))
+     (character->digit n))))
+
+(define (extract-ranges offsets (inclusive-last-offset #f))
+  (define to-offsets
+    (if inclusive-last-offset
+        (append (cdr offsets)
+                (list (+ 1 inclusive-last-offset)))
+        (cdr offsets)))
+  (for/list ([from offsets]
+             [to to-offsets])
+    (cons from (sub1 to))))
 
 (define (part2 input)
-  ;; spaces are important here
-  (define rows (string-split input "\n"))
-  (define num-cols (string-length (car rows)))
-  (define data (drop-right rows 1))
-  (define ops 
-    (for/list ([(op i) (in-indexed (last rows))]
-               #:when (not (char=? op #\space)))
-      (cons i
-            (cond [(char=? #\+ op) +]
-                  [(char=? #\* op) *]))))
+  (define lines (string-split input "\n"))
+  (define num-cols (string-length (car lines)))
+  (define data (drop-right lines 1))
+  
+  ;; extract operators and their offsets from last line
+  (define-values (ops offsets)
+    (for/fold ([ops empty]
+               [offsets empty]
+               #:result (values (reverse ops) (reverse offsets)))
+              ([(op i) (in-indexed (last lines))]
+               #:unless (char=? op #\space))
+      (values (cons (char->operator op) ops)
+              (cons i offsets))))
+  
+  (define ranges (extract-ranges offsets num-cols))
+  
   (for/sum ([op ops]
-            [next-op (append (cdr ops) (list 'last))])
-    (define from (car op))
-    (define to (if (symbol? next-op)
-                   num-cols
-                   (sub1 (car next-op))))
-    (define result 
-      (apply (cdr op)
-             (for/list ([i (in-range from to)])
-               (define num
-                 (list->number
-                  (for/list ([row data]
-                             #:do [(define n (string-ref row i))]
-                             #:unless (char=? n #\space))
-                    (c->i n))))
-               num)))
-    result))
+            [range ranges])
+    (define from (car range))
+    (define to (cdr range))
+    (define numbers
+      (for/list ([offset (in-range from to)])
+        (column-number offset data)))
 
+    (apply op numbers)))
 
 (time (part2 input))
 ;; cpu time: 1 real time: 1 gc time: 0
