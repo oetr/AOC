@@ -4,6 +4,15 @@
 
 (define input (fetch-aoc-input (find-session) 2025 7 #:cache #true))
 
+(define (hash-update* h updater default . keys)
+  (define not-there (gensym))
+  (for/fold ([h h]) ([key keys])
+    (define old-mapping (hash-ref h key not-there))
+    (if (and (symbol? old-mapping)
+             (symbol=? not-there old-mapping))
+        (hash-set h key default)
+        (hash-update h key updater))))
+
 (define (add-beam beams x n)
   (define n-worlds (hash-ref beams x #f))
   (if n-worlds
@@ -18,8 +27,8 @@
     (match (string-ref line beam)
       [#\^
        (values
-        (add-beam (add-beam result (sub1 beam) n-worlds)
-                  (add1 beam) n-worlds)
+        (hash-update* result (curry + n-worlds) n-worlds
+                      (sub1 beam) (add1 beam))
         (+ split-times 1))]
       [_ (values (add-beam result beam n-worlds)
                  split-times)])))
