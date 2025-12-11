@@ -87,11 +87,13 @@
                         (uf-find circuit)))
             (lambda (a b) (> (length a) (length b))))))
 
-(define groups (part1 input 1000))
-(apply * (map length (take groups 3)))
+(time (let ([groups (part1 input 1000)])
+        (apply * (map length (take groups 3)))))
+;; cpu time: 418 real time: 418 gc time: 50
 
 ;; 4480 - wrong
 ;; 123420 - Seriously WTF? In the actual task, we need to count skipped connections, but in the example,
 ;; we don't. This is BS.
 
-(part1 input -1 #t)
+(time (part1 input -1 #t))
+;; cpu time: 422 real time: 422 gc time: 57
