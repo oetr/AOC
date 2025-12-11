@@ -97,6 +97,6 @@
 (time (part2 input))
 ;; cpu time: 264 real time: 1502 gc time: 37
 
-;; 17214 --- wrong answer (probably need to minimize the solution)
+;; 17214 --- wrong answer (by mistake, I solved the same machine 1000 times!)
 ;; 15019 -- too high
 ;; 15017 -- correct after using solver-minimize twice!
