@@ -31,7 +31,11 @@
 (define nodes (parse input))
 
 ;; part 1
-(find-nof-paths nodes 'you 'out)
+(time (find-nof-paths nodes 'you 'out))
+;; cpu time: 0 real time: 0 gc time: 0
+;; 708
 
 ;; part 2
-(find-nof-paths nodes 'svr 'out #t)
+(time (find-nof-paths nodes 'svr 'out #t))
+;; cpu time: 2 real time: 2 gc time: 0
+;; 545394698933400
